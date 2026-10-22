@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="NailBookingSys.Api/NailBookingSys.Api.csproj" />
+  <Project Path="NailBookingSys.Contracts/NailBookingSys.Contracts.csproj" />
+  <Project Path="NailBookingSys.Ui/NailBookingSys.Ui.csproj" />
+</Solution>
