@@ -27,7 +27,7 @@ public class Appointment
         StartTime = startTime;
         EndTime = endTime;
         Price = price;
-        Status = AppointmentStatus.Scheduled;
+        Status = AppointmentStatus.Booked;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -37,7 +37,7 @@ public class Appointment
     {
         StartTime = newStartTime;
         EndTime = newEndTime;
-        Status = AppointmentStatus.Rescheduled;
+        Status = AppointmentStatus.Booked;
     }
 }
 
