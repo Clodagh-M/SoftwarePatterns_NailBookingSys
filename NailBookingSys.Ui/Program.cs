@@ -1,4 +1,5 @@
 using NailBookingSys.Ui.Components;
+using NailBookingSys.Ui.Services;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,13 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri("http://localhost:7201/")
+});
+
+builder.Services.AddScoped<SalonApiClient>();
 
 var app = builder.Build();
 

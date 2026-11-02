@@ -1,0 +1,311 @@
+﻿@page "/booking"
+@using NailBookingSys.Contracts.Domain
+@using NailBookingSys.Ui.Contracts
+@using NailBookingSys.Ui.Services
+@inject SalonApiClient Api
+@inject ISnackbar Snackbar
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Book an Appointment</PageTitle>
+
+<MudText Typo="Typo.h3" Class="mb-1" Align="Align.Center">
+    Book Your Visit
+</MudText>
+<MudText Typo="Typo.subtitle1" Color="Color.Secondary" Align="Align.Center" Class="mb-6">
+    Four quick steps to your perfect set of nails ✨
+</MudText>
+
+<MudPaper Elevation="1" Class="pa-6">
+
+    @* Progress indicator *@
+    <MudGrid Class="mb-6" Justify="Justify.Center">
+        @for (int i = 1; i <= 4; i++)
+        {
+            var step = i;
+            <MudItem xs="3" Class="text-center">
+                <MudAvatar Size="Size.Large"
+                           Color="@(step <= _step ? Color.Primary : Color.Default)"
+                           Variant="@(step <= _step ? Variant.Filled : Variant.Outlined)">
+                    @step
+                </MudAvatar>
+                <MudText Typo="Typo.caption" Class="mt-1">@StepLabel(step)</MudText>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudDivider Class="mb-6" />
+
+    @switch (_step)
+    {
+        // ---------- STEP 1: SERVICE ----------
+        case 1:
+            <MudText Typo="Typo.h5" Class="mb-4">Choose a service</MudText>
+            @if (_loadingServices)
+            {
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            }
+            else
+            {
+                <MudGrid>
+                    @foreach (var s in _services)
+                    {
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Outlined="@(_service != s)"
+                                     Class="pa-4 cursor-pointer"
+                                     Style="@(_service == s ? "border-color:#6A1B9A;border-width:2px;background:#F5E9F2;" : "")"
+                                     @onclick="() => PickService(s)">
+                                <MudText Typo="Typo.h6">@s.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @s.DurationMinutes min
+                                </MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Primary" Class="mt-2">
+                                    €@s.Price.ToString("0.00")
+                                </MudText>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+            break;
+
+        // ---------- STEP 2: TIME ----------
+        case 2:
+            <MudText Typo="Typo.h5" Class="mb-4">Pick a date & time</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker Label="Date"
+                                   Date="_date"
+                                   DateChanged="OnDateChanged"
+                                   MinDate="DateTime.Today"
+                                   Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Available slots</MudText>
+                    @if (_slots.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">No slots available for this date.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudChipSet T="DateTime?" @bind-SelectedValue="_startTime">
+                            @foreach (var t in _slots)
+                            {
+                                <MudChip T="DateTime?" Value="@t" Color="Color.Primary" Variant="Variant.Outlined">
+                                    @t.ToString("HH:mm")
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                    }
+                </MudItem>
+            </MudGrid>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-6">
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="() => _step = 1">Back</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(_startTime is null)"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           OnClick="() => _step = 3">Next</MudButton>
+            </MudStack>
+            break;
+
+        // ---------- STEP 3: TECHNICIAN ----------
+        case 3:
+            <MudText Typo="Typo.h5" Class="mb-4">Choose your nail technician</MudText>
+            <MudGrid>
+                @foreach (var s in _staff)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Outlined="@(_staffMember != s)"
+                                 Class="pa-4 cursor-pointer text-center"
+                                 Style="@(_staffMember == s ? "border-color:#6A1B9A;border-width:2px;background:#F5E9F2;" : "")"
+                                 @onclick="() => _staffMember = s">
+                            <MudAvatar Color="Color.Secondary" Size="Size.Large" Class="mx-auto mb-2">
+                                @s.Name[0]
+                            </MudAvatar>
+                            <MudText Typo="Typo.h6">@s.Name</MudText>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            <MudTextField T="string" @bind-Value="_customerName"
+                          Label="Your name"
+                          Variant="Variant.Outlined"
+                          Class="mt-6"
+                          Immediate="true"
+                          Required="true" />
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-6">
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="() => _step = 2">Back</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(_staffMember is null || string.IsNullOrWhiteSpace(_customerName))"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           OnClick="() => _step = 4">Next</MudButton>
+            </MudStack>
+            break;
+
+        // ---------- STEP 4: CONFIRM ----------
+        case 4:
+            <MudText Typo="Typo.h5" Class="mb-4">Confirm your booking</MudText>
+
+            <MudSimpleTable Dense="true" Class="mb-6">
+                <tbody>
+                    <tr><td><strong>Service</strong></td>
+                        <td>@_service!.Name (@_service.DurationMinutes min)</td></tr>
+                    <tr><td><strong>Price</strong></td>
+                        <td>€@_service.Price.ToString("0.00")</td></tr>
+                    <tr><td><strong>Date</strong></td>
+                        <td>@_startTime!.Value.ToString("dddd, d MMMM yyyy")</td></tr>
+                    <tr><td><strong>Time</strong></td>
+                        <td>@_startTime!.Value.ToString("HH:mm") –
+                            @_startTime!.Value.AddMinutes(_service.DurationMinutes).ToString("HH:mm")</td></tr>
+                    <tr><td><strong>Technician</strong></td>
+                        <td>@_staffMember!.Name</td></tr>
+                    <tr><td><strong>Name</strong></td>
+                        <td>@_customerName</td></tr>
+                </tbody>
+            </MudSimpleTable>
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="() => _step = 3">Back</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@_submitting"
+                           StartIcon="@Icons.Material.Filled.Check"
+                           OnClick="ConfirmAsync">
+                    @(_submitting ? "Booking..." : "Confirm booking")
+                </MudButton>
+            </MudStack>
+
+            @if (_submitting)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+            }
+            break;
+
+        // ---------- DONE ----------
+        case 5:
+            <MudPaper Elevation="0" Class="pa-6 text-center" Style="background:#F5E9F2;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                         Color="Color.Success" Style="font-size:64px;" />
+                <MudText Typo="Typo.h4" Class="mt-2">Appointment booked!</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2">
+                    @_confirmed!.StartTime.ToString("dddd, d MMMM 'at' HH:mm")
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                           Href="/booking" OnClick="Reset">
+                    Book another
+                </MudButton>
+            </MudPaper>
+            break;
+    }
+
+</MudPaper>
+
+@code {
+    private int _step = 1;
+    private bool _submitting;
+    private bool _loadingServices = true;
+
+    private List<ServiceDto> _services = new();
+    private List<StaffDto> _staff = new();
+    private List<DateTime> _slots = new();
+
+    private ServiceDto? _service;
+    private DateTime? _date = DateTime.Today.AddDays(1);
+    private DateTime? _startTime;
+    private StaffDto? _staffMember;
+    private string _customerName = "";
+    private BookAppointmentResponseDto? _confirmed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _services = (await Api.GetServicesAsync()).ToList();
+            _staff = (await Api.GetStaffAsync()).ToList();
+            RebuildSlots();
+        }
+        finally
+        {
+            _loadingServices = false;
+        }
+    }
+
+    private string StepLabel(int n) => n switch
+    {
+        1 => "Service",
+        2 => "Time",
+        3 => "Technician",
+        4 => "Confirm",
+        _ => ""
+    };
+
+    private void PickService(ServiceDto s)
+    {
+        _service = s;
+        _startTime = null;
+        RebuildSlots();
+        _step = 2;
+    }
+
+    private void OnDateChanged(DateTime? d)
+    {
+        _date = d;
+        _startTime = null;
+        RebuildSlots();
+    }
+
+    private void RebuildSlots()
+    {
+        _slots.Clear();
+        if (_service is null || _date is null) return;
+
+        var day = _date.Value.Date;
+        for (var t = day.Add(SalonSettings.OpeningTime);
+             t.AddMinutes(_service.DurationMinutes).TimeOfDay <= SalonSettings.ClosingTime;
+             t = t.AddMinutes(30))
+        {
+            _slots.Add(t);
+        }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        _submitting = true;
+        try
+        {
+            var req = new BookAppointmentRequestDto(
+                _customerName.Trim(), _staffMember!.Id, _service!.Type, _startTime!.Value);
+
+            var (ok, err, result) = await Api.BookAsync(req);
+            if (!ok)
+            {
+                Snackbar.Add(err ?? "Booking failed. Please try again.",
+                             Severity.Error, cfg => cfg.VisibleStateDuration = 6000);
+                return;
+            }
+
+            _confirmed = result;
+            _step = 5;
+            Snackbar.Add("Appointment confirmed!", Severity.Success);
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private void Reset()
+    {
+        _step = 1;
+        _service = null;
+        _staffMember = null;
+        _startTime = null;
+        _customerName = "";
+        _confirmed = null;
+        _date = DateTime.Today.AddDays(1);
+        RebuildSlots();
+    }
+}
