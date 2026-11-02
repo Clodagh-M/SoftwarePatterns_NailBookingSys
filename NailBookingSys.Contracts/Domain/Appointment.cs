@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NailBookingSys.Contracts.Domain;
+﻿namespace NailBookingSys.Contracts.Domain;
 
 public class Appointment
 {
@@ -18,9 +14,10 @@ public class Appointment
 
     private Appointment() { }
 
-    public Appointment(string customerName, Guid staffId, ServiceType serviceType, DateTime startTime, DateTime endTime, decimal price)
+    public Appointment(Guid id, string customerName, Guid staffId, ServiceType serviceType,
+                       DateTime startTime, DateTime endTime, decimal price)
     {
-        Id = Guid.NewGuid();
+        Id = id;
         CustomerName = customerName;
         StaffId = staffId;
         ServiceType = serviceType;
