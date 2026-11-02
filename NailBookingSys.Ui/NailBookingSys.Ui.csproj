@@ -7,4 +7,8 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NailBookingSys.Contracts\NailBookingSys.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>
