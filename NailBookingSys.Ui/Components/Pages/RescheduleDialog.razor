@@ -1,0 +1,102 @@
+﻿@using NailBookingSys.Contracts.Domain
+@using NailBookingSys.Ui.Contracts
+@using NailBookingSys.Ui.Services
+@inject SalonApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Reschedule @Appointment.CustomerName</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
+            Current: @Appointment.StartTime.ToString("dddd, d MMMM 'at' HH:mm") — @Appointment.ServiceType
+        </MudText>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Available slots</MudText>
+
+        @if (_loadingSlots)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-2" />
+        }
+        else if (_newDate is null)
+        {
+            <MudAlert Severity="Severity.Info">Pick a date to see available slots.</MudAlert>
+        }
+        else if (_slots.Count == 0)
+        {
+            <MudAlert Severity="Severity.Warning">No slots available for this date.</MudAlert>
+        }
+        else
+        {
+            <MudChipSet T="DateTime?" @bind-SelectedValue="_selectedSlot">
+                @foreach (var t in _slots)
+                {
+                    <MudChip T="DateTime?" Value="@t"
+                             Color="Color.Primary"
+                             Variant="Variant.Outlined">
+                        @t.ToString("HH:mm")
+                    </MudChip>
+                }
+            </MudChipSet>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(_selectedSlot is null || _loadingSlots)"
+                   OnClick="Confirm">Confirm</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public AppointmentDto Appointment { get; set; } = default!;
+
+    private DateTime? _newDate;
+    private DateTime? _selectedSlot;
+    private List<DateTime> _slots = new();
+    private bool _loadingSlots;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _newDate = Appointment.StartTime.Date;
+        await LoadSlotsAsync();
+    }
+
+    private async Task OnDateChanged(DateTime? d)
+    {
+        _newDate = d;
+        _selectedSlot = null;
+        await LoadSlotsAsync();
+    }
+
+    private async Task LoadSlotsAsync()
+    {
+        _slots.Clear();
+        if (_newDate is null) return;
+
+        _loadingSlots = true;
+        try
+        {
+            _slots = (await Api.GetAvailableSlotsAsync(_newDate.Value, Appointment.StaffId, Appointment.ServiceType))
+                        .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load slots: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loadingSlots = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Confirm()
+    {
+        if (_selectedSlot is null) return;
+        MudDialog.Close(DialogResult.Ok(_selectedSlot.Value));
+    }
+}

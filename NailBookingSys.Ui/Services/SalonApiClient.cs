@@ -1,4 +1,5 @@
-﻿using NailBookingSys.Ui.Contracts;
+﻿using NailBookingSys.Contracts.Domain;
+using NailBookingSys.Ui.Contracts;
 
 namespace NailBookingSys.Ui.Services;
 
@@ -37,6 +38,12 @@ public class SalonApiClient
             new { newStartTime = newStart });
         return resp.IsSuccessStatusCode ? (true, null) : (false, await ExtractErrorAsync(resp));
     }
+
+    public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(
+    DateTime day, Guid staffId, ServiceType service)
+    => await _http.GetFromJsonAsync<List<DateTime>>(
+           $"api/appointments/available-slots" +
+           $"?date={day:yyyy-MM-dd}&staffId={staffId}&service={service}") ?? [];
 
     private static async Task<string?> ExtractErrorAsync(HttpResponseMessage resp)
     {

@@ -1,0 +1,138 @@
+﻿@page "/admin"
+@using NailBookingSys.Ui.Contracts
+@using NailBookingSys.Ui.Services
+@inject SalonApiClient Api
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<MudText Typo="Typo.h3" Class="mb-1">Admin Dashboard</MudText>
+<MudText Typo="Typo.subtitle1" Color="Color.Secondary" Class="mb-4">
+    View, reschedule and cancel appointments for the day.
+</MudText>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker Label="Day"
+                           Date="_day"
+                           DateChanged="OnDayChanged"
+                           Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="8" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadAsync">Refresh</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+
+@foreach (var appt in _appointments)
+{
+    <MudPaper Elevation="0" Class="pa-4 mb-2">
+        <MudGrid>
+            <MudItem xs="12" sm="3">
+                <MudText Typo="Typo.subtitle1">@appt.StartTime.ToString("t")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle1">@appt.CustomerName</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@appt.ServiceType</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="3" Class="d-flex align-center justify-end">
+                <MudButton Variant="Variant.Outlined"
+                           FullWidth
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Edit"
+                           Class="w-100 me-1"
+                           OnClick="@(() => OpenReschedule(appt))">Reschedule</MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           FullWidth
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           Class="w-100 ms-1"
+                           OnClick="@(() => CancelAsync(appt))">Cancel</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    private DateTime? _day = DateTime.Today;
+    private List<AppointmentDto> _appointments = new();
+    private bool _loading;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task OnDayChanged(DateTime? d)
+    {
+        _day = d;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (_day is null) return;
+        _loading = true;
+        try
+        {
+            _appointments = (await Api.GetAppointmentsForDayAsync(_day.Value)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CancelAsync(AppointmentDto appt)
+    {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Cancel appointment",
+            $"Cancel {appt.CustomerName}'s {appt.ServiceType} at {appt.StartTime:HH:mm}?",
+            yesText: "Cancel it", cancelText: "Keep");
+
+        if (confirm != true) return;
+
+        var (ok, err) = await Api.CancelAsync(appt.Id);
+        if (!ok)
+        {
+            Snackbar.Add(err ?? "Cancellation failed.", Severity.Error);
+            return;
+        }
+        Snackbar.Add("Appointment cancelled.", Severity.Success);
+        await LoadAsync();
+    }
+
+    private async Task OpenReschedule(AppointmentDto appt)
+    {
+        var parameters = new DialogParameters<RescheduleDialog>
+        {
+            { x => x.Appointment, appt }
+        };
+        var dialog = await DialogService.ShowAsync<RescheduleDialog>("Reschedule", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled) return;
+
+        if (result.Data is DateTime newStart)
+        {
+            var (ok, err) = await Api.RescheduleAsync(appt.Id, newStart);
+            if (!ok)
+            {
+                Snackbar.Add(err ?? "Reschedule failed.", Severity.Error);
+                return;
+            }
+            Snackbar.Add("Appointment rescheduled.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+}
