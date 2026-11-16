@@ -16,4 +16,5 @@ public interface IBookingService
     Task<BookingResult> RescheduleAsync(Guid appointmentId, DateTime newStartTime, CancellationToken ct = default);
     Task CancelAsync(Guid appointmentId, CancellationToken ct = default);
     Task<IReadOnlyList<Appointment>> GetAppointmentsForDayAsync(DateTime day, CancellationToken ct = default);
+    Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(DateTime day, ServiceType service, CancellationToken ct = default);
 }

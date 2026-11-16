@@ -133,4 +133,41 @@ public sealed class BookingService : IBookingService
             throw new BookingException("This slot is already booked for the selected nail technician.");
     }
 
+    public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(
+    DateTime day, ServiceType serviceType, CancellationToken ct = default)
+    {
+        var service = _serviceFactory.Create(serviceType);
+        var duration = service.DurationInMinutes;
+
+        var dayStart = day.Date.Add(SalonSettings.OpeningTime);
+        var dayEnd = day.Date.Add(SalonSettings.ClosingTime);
+
+        var now = DateTime.Now;
+        if (dayEnd < now) return Array.Empty<DateTime>();
+
+        var slots = new List<DateTime>();
+
+        for (var t = dayStart;
+             t.AddMinutes(duration).TimeOfDay <= SalonSettings.ClosingTime;
+             t = t.AddMinutes(30))
+        {
+            var end = t.AddMinutes(duration);
+
+            if (t < now) continue;
+            if (t.Date != end.Date) continue;
+
+            try
+            {
+                await EnsureNoOverlapAsync(Guid.Empty, t, end, excludeId: null, ct);
+                slots.Add(t);
+            }
+            catch (BookingException)
+            {
+                // Overlap — skip this slot.
+            }
+        }
+
+        return slots;
+    }
+
 }
