@@ -1,0 +1,7 @@
+﻿C:\Users\StudentClodaghMulvih\Documents\sdp\NailBookingSys.Tests\BookingServiceTests.cs
+C:\Users\StudentClodaghMulvih\.nuget\packages\microsoft.net.test.sdk\17.14.1\build\net8.0\Microsoft.NET.Test.Sdk.Program.cs
+C:\Users\StudentClodaghMulvih\.nuget\packages\microsoft.testplatform.testhost\17.14.1\build\net8.0\x64\testhost.exe
+C:\Users\StudentClodaghMulvih\.nuget\packages\microsoft.testplatform.testhost\17.14.1\build\net8.0\x64\testhost.dll
+C:\Users\StudentClodaghMulvih\.nuget\packages\xunit.runner.visualstudio\3.1.5\build\net8.0\xunit.abstractions.dll
+C:\Users\StudentClodaghMulvih\.nuget\packages\xunit.runner.visualstudio\3.1.5\build\net8.0\xunit.runner.visualstudio.testadapter.dll
+C:\Users\StudentClodaghMulvih\Documents\sdp\NailBookingSys.Tests\TestResults\01e79181-63f0-420e-962d-36739b702402\StudentClodaghMulvih_CUBE-KY-76NNCJ3_2026-11-24.09_12_50.coverage
